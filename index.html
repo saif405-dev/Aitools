@@ -23,9 +23,70 @@
         html {
             scroll-behavior: smooth;
         }
+        .login-modal {
+            backdrop-filter: blur(8px);
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+        .content-blur {
+            filter: blur(5px);
+            pointer-events: none;
+            user-select: none;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
+    <!-- Login Modal -->
+    <div id="login-modal" class="login-modal fixed inset-0 z-[100] flex items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+            <div class="text-center mb-6">
+                <div class="inline-block p-3 bg-purple-100 rounded-full mb-4">
+                    <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">Welcome Back</h2>
+                <p class="text-gray-600 mt-2">Please login to access AI Tools Hub</p>
+            </div>
+            
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="login-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input 
+                        type="email" 
+                        id="login-email" 
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                        placeholder="Enter your email"
+                    >
+                </div>
+                
+                <div>
+                    <label for="login-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input 
+                        type="password" 
+                        id="login-password" 
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                        placeholder="Enter your password"
+                    >
+                </div>
+                
+                <div id="login-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    Invalid email or password. Please try again.
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                    Login
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <div id="main-content" class="content-blur">
     <!-- Navigation -->
     <nav class="bg-white shadow-md sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -35,13 +96,18 @@
                         AI Tools Hub
                     </span>
                 </div>
-                <div class="hidden md:flex space-x-8">
+                <div class="hidden md:flex space-x-8 items-center">
                     <a href="#chatbots" class="text-gray-700 hover:text-purple-600 font-medium transition">Chatbots</a>
                     <a href="#content" class="text-gray-700 hover:text-purple-600 font-medium transition">Content</a>
                     <a href="#design" class="text-gray-700 hover:text-purple-600 font-medium transition">Design</a>
                     <a href="#productivity" class="text-gray-700 hover:text-purple-600 font-medium transition">Productivity</a>
                     <a href="#seo" class="text-gray-700 hover:text-purple-600 font-medium transition">SEO</a>
                     <a href="contact.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">Contact</a>
+                    <button id="logout-btn" class="text-gray-700 hover:text-red-600 font-medium transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                    </button>
                 </div>
                 <button id="mobile-menu-btn" class="md:hidden p-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,6 +125,7 @@
                 <a href="#productivity" class="block px-3 py-2 text-gray-700 hover:bg-purple-50 rounded-md">Productivity</a>
                 <a href="#seo" class="block px-3 py-2 text-gray-700 hover:bg-purple-50 rounded-md">SEO</a>
                 <a href="contact.html" class="block px-3 py-2 text-purple-600 font-medium hover:bg-purple-50 rounded-md">Contact</a>
+                <button id="logout-btn-mobile" class="block w-full text-left px-3 py-2 text-red-600 font-medium hover:bg-red-50 rounded-md">Logout</button>
             </div>
         </div>
     </nav>
@@ -282,8 +349,77 @@
             </div>
         </div>
     </footer>
+    </div>
+    <!-- End Main Content Wrapper -->
 
     <script>
+        // Login Authentication
+        const VALID_EMAIL = 'saif@gmail.com';
+        const VALID_PASSWORD = 'saif@2025#';
+        
+        const loginModal = document.getElementById('login-modal');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const mainContent = document.getElementById('main-content');
+        
+        // Check if user is already logged in
+        function checkAuth() {
+            const isLoggedIn = localStorage.getItem('aiToolsHubAuth') === 'true';
+            if (isLoggedIn) {
+                loginModal.classList.add('hidden');
+                mainContent.classList.remove('content-blur');
+            } else {
+                loginModal.classList.remove('hidden');
+                mainContent.classList.add('content-blur');
+            }
+        }
+        
+        // Handle login form submission
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (email === VALID_EMAIL && password === VALID_PASSWORD) {
+                // Successful login
+                localStorage.setItem('aiToolsHubAuth', 'true');
+                loginModal.classList.add('hidden');
+                mainContent.classList.remove('content-blur');
+                loginError.classList.add('hidden');
+                loginForm.reset();
+            } else {
+                // Failed login
+                loginError.classList.remove('hidden');
+                // Shake animation
+                loginError.style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    loginError.style.animation = '';
+                }, 500);
+            }
+        });
+        
+        // Check auth on page load
+        checkAuth();
+
+        // Logout functionality
+        const logoutBtn = document.getElementById('logout-btn');
+        const logoutBtnMobile = document.getElementById('logout-btn-mobile');
+        
+        function handleLogout() {
+            localStorage.removeItem('aiToolsHubAuth');
+            loginModal.classList.remove('hidden');
+            mainContent.classList.add('content-blur');
+            loginForm.reset();
+            loginError.classList.add('hidden');
+        }
+        
+        logoutBtn.addEventListener('click', handleLogout);
+        logoutBtnMobile.addEventListener('click', () => {
+            handleLogout();
+            mobileMenu.classList.add('hidden');
+        });
+
         // Mobile menu toggle
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
         const mobileMenu = document.getElementById('mobile-menu');
